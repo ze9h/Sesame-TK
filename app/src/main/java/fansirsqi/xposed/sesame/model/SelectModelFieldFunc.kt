@@ -1,35 +1,37 @@
-package fansirsqi.xposed.sesame.model;
-import java.util.LinkedHashMap;
-import java.util.Map;
-public interface SelectModelFieldFunc {
-    void clear();
-    Integer get(String id);
-    void add(String id, Integer count);
-    void remove(String id);
-    Boolean contains(String id);
-    static SelectModelFieldFunc newMapInstance() {
-        return new SelectModelFieldFunc() {
-            private final Map<String, Integer> map = new LinkedHashMap<>();
-            @Override
-            public void clear() {
-                map.clear();
+package fansirsqi.xposed.sesame.model
+
+interface SelectModelFieldFunc {
+    fun clear()
+    fun get(id: String?): Int?
+    fun add(id: String?, count: Int?)
+    fun remove(id: String?)
+    fun contains(id: String?): Boolean?
+
+    companion object {
+        @JvmStatic
+        fun newMapInstance(): SelectModelFieldFunc {
+            return object : SelectModelFieldFunc {
+                private val map: MutableMap<String?, Int?> = LinkedHashMap<String?, Int?>()
+                override fun clear() {
+                    map.clear()
+                }
+
+                override fun get(id: String?): Int? {
+                    return map.get(id)
+                }
+
+                override fun add(id: String?, count: Int?) {
+                    map.put(id, count)
+                }
+
+                override fun remove(id: String?) {
+                    map.remove(id)
+                }
+
+                override fun contains(id: String?): Boolean {
+                    return map.containsKey(id)
+                }
             }
-            @Override
-            public Integer get(String id) {
-                return map.get(id);
-            }
-            @Override
-            public void add(String id, Integer count) {
-                map.put(id, count);
-            }
-            @Override
-            public void remove(String id) {
-                map.remove(id);
-            }
-            @Override
-            public Boolean contains(String id) {
-                return map.containsKey(id);
-            }
-        };
+        }
     }
 }
