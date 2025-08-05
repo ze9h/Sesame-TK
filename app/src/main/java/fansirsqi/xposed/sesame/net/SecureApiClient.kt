@@ -57,29 +57,28 @@ class SecureApiClient(
         token: String? = null,
         path: String
     ): JSONObject? {
-        if (publicKey == null && !getPublicKey()) return null
+        return try {
+            if (publicKey == null && !getPublicKey()) return null
 
-        val aesKey = generateAESKey()
-        val requestJson =
-            JSONObject().apply {
+            val aesKey = generateAESKey()
+            val requestJson = JSONObject().apply {
                 put("device_id", deviceId)
                 if (alipayId != null) put("alipay_id", alipayId)
                 if (token != null) put("authorization", "Bearer $token")
             }
 
-        val (ciphertext, iv, tag) = aesGcmEncrypt(requestJson.toString(), aesKey)
-        val encryptedKey = rsaEncryptAESKey(aesKey, publicKey!!)
+            val (ciphertext, iv, tag) = aesGcmEncrypt(requestJson.toString(), aesKey)
+            val encryptedKey = rsaEncryptAESKey(aesKey, publicKey!!)
 
-        val keyB64 = Base64.encodeToString(encryptedKey, Base64.NO_WRAP)
-        val dataB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP)
-        val ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP)
-        val tagB64 = Base64.encodeToString(tag, Base64.NO_WRAP)
-        val timestamp = System.currentTimeMillis() / 1000
+            val keyB64 = Base64.encodeToString(encryptedKey, Base64.NO_WRAP)
+            val dataB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+            val ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP)
+            val tagB64 = Base64.encodeToString(tag, Base64.NO_WRAP)
+            val timestamp = System.currentTimeMillis() / 1000
 
-        val sig = generateSignature(keyB64, dataB64, ivB64, tagB64, timestamp, signatureKey)
+            val sig = generateSignature(keyB64, dataB64, ivB64, tagB64, timestamp, signatureKey)
 
-        val payload =
-            JSONObject().apply {
+            val payload = JSONObject().apply {
                 put("key", keyB64)
                 put("data", dataB64)
                 put("iv", ivB64)
@@ -88,26 +87,30 @@ class SecureApiClient(
                 put("sig", sig)
             }
 
-        val body = payload.toString().toRequestBody("application/json".toMediaTypeOrNull())
-        val request = Request.Builder().url("$baseUrl$path").post(body).build()
+            val body = payload.toString().toRequestBody("application/json".toMediaTypeOrNull())
+            val request = Request.Builder().url("$baseUrl$path").post(body).build()
 
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                return JSONObject().put("error", "HTTP Error: ${response.code}")
+            val result = client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    JSONObject().put("error", "HTTP Error: ${response.code}")
+                } else {
+                    val encryptedBody = response.body.string()
+                    val encryptedJson = JSONObject(encryptedBody)
+                    val ivDec = Base64.decode(encryptedJson.getString("iv"), Base64.NO_WRAP)
+                    val tagDec = Base64.decode(encryptedJson.getString("tag"), Base64.NO_WRAP)
+                    val dataDec = Base64.decode(encryptedJson.getString("data"), Base64.NO_WRAP)
+                    val decryptedPayload = aesGcmDecrypt(aesKey, ivDec, tagDec, dataDec)
+                    JSONObject(decryptedPayload)
+                }
             }
-            val encryptedBody = response.body.string()
-            val encryptedJson = JSONObject(encryptedBody)
-            // Decode the encrypted parts from Base64
-            val ivDec = Base64.decode(encryptedJson.getString("iv"), Base64.NO_WRAP)
-            val tagDec = Base64.decode(encryptedJson.getString("tag"), Base64.NO_WRAP)
-            val dataDec = Base64.decode(encryptedJson.getString("data"), Base64.NO_WRAP)
 
-            // Decrypt the response data using the same AES key
-            val decryptedPayload = aesGcmDecrypt(aesKey, ivDec, tagDec, dataDec)
-            val decryptedJson = JSONObject(decryptedPayload)
-            return decryptedJson
+            return result
+        } catch (e: Exception) {
+            e.printStackTrace()
+            JSONObject().put("error", e.message)
         }
     }
+
 
     private fun loadRSAPublicKey(pem: String): PublicKey {
         val clean =
