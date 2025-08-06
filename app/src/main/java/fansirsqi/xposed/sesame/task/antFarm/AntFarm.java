@@ -679,17 +679,15 @@ public class AntFarm extends ModelTask {
             }
         }
 		
-		// 2. 使用加饭卡（仅当正在吃饭且开启配置）
+	// 2. 使用加饭卡（仅当正在吃饭且开启配置）
         if (useBigEaterTool.getValue() && AnimalFeedStatus.EATING.name().equals(ownerAnimal.animalFeedStatus)) {
-            Log.farm("🍚 小鸡正在吃饭，准备使用「加饭卡」...");
-            // 使用内部枚举调用
             boolean result = useFarmTool(ownerFarmId, AntFarm.ToolType.BIG_EATER_TOOL);
             if (result) {
-                Log.farm("✅ 成功使用1张「加饭卡」！");
+                Log.farm("使用道具🎭[加饭卡]！");
                 GlobalThreadPools.sleep(1000);
                 needReload = true;
             } else {
-                Log.farm("⚠️ 使用「加饭卡」失败，可能卡片不足或状态异常~");
+                Log.record("⚠️使用道具🎭[加饭卡]失败，可能卡片不足或状态异常~");
             }
         }
 
