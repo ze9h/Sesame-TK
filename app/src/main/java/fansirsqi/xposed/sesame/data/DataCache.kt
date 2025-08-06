@@ -77,7 +77,6 @@ object DataCache {
 
     @Synchronized
     private fun save(): Boolean {
-        Log.runtime(TAG, "【SAVE】当前 dataMap 内容: $dataMap")
         val targetFile = File(FILE_PATH, FILENAME)
         val tempFile = File(targetFile.parent, "${targetFile.name}.tmp")
         return try {
