@@ -884,11 +884,11 @@ public class AntForest extends ModelTask {
             String userName, bizType;
             if (!fromTag.equals("pk")) {
                 userName = UserMap.getMaskName(userId);
-                bizType = "";
             } else {
                 userName = "PK榜好友" + userHomeObj.getJSONObject("userEnergy").getString("displayName");
-                bizType = "GREEN";
+
             }
+            bizType = "GREEN";
             if (cacheCollectedMap.containsKey(userId)) {
                 Log.runtime(TAG, userName + "已缓存，跳过");
                 return userHomeObj;
