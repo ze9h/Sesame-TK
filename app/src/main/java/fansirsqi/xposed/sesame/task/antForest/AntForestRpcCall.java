@@ -61,7 +61,7 @@ public class AntForestRpcCall {
         }
     }
 
-    public static String fillUserRobFlag(String userIdList) {
+    public static String fillUserRobFlag(JSONArray userIdList) {
         try {
             JSONObject arg = new JSONObject();
             arg.put("source", "chInfo_ch_appcenter__chsub_9patch");
@@ -76,7 +76,7 @@ public class AntForestRpcCall {
         }
     }
 
-    public static String fillUserRobFlag(String userIdList, boolean needFillUserInfo) {
+    public static String fillUserRobFlag(JSONArray userIdList, boolean needFillUserInfo) {
         try {
             JSONObject arg = new JSONObject();
             arg.put("source", "chInfo_ch_appcenter__chsub_9patch");
