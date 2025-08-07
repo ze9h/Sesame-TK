@@ -1099,9 +1099,9 @@ public class AntForest extends ModelTask {
             if (errorWait) return;
             String jsonStr;
             if (flag.equals("pk")) {
-                jsonStr = AntForestRpcCall.fillUserRobFlag(new JSONArray(userIds).toString(), true);
+                jsonStr = AntForestRpcCall.fillUserRobFlag(new JSONArray(userIds), true);
             } else {
-                jsonStr = AntForestRpcCall.fillUserRobFlag(new JSONArray(userIds).toString());
+                jsonStr = AntForestRpcCall.fillUserRobFlag(new JSONArray(userIds));
             }
             JSONObject batchObj = new JSONObject(jsonStr);
             JSONArray friendList = batchObj.optJSONArray("friendRanking");
