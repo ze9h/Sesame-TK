@@ -1,12 +1,18 @@
 package fansirsqi.xposed.sesame.newutil
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.core.util.DefaultIndenter
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import java.io.File
+import java.nio.file.StandardWatchEventKinds
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
+import kotlin.concurrent.thread
 import kotlin.concurrent.write
 
 object DataStore {
@@ -20,7 +26,14 @@ object DataStore {
             if (!exists()) createNewFile()
         }
         loadFromDisk()
-        startWatcher()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startWatcherNio() else startWatcher()
+    }
+
+    inline fun <reified T : Any> DataStore.getOrCreate(key: String) = getOrCreate(key, object : TypeReference<T>() {})
+
+    private fun checkInit() {
+        if (!::storageFile.isInitialized)
+            throw IllegalStateException("DataStore.init(dir) must be called first!")
     }
 
     fun <T> get(key: String, clazz: Class<T>): T? = lock.read {
@@ -87,8 +100,13 @@ object DataStore {
         data.putAll(loaded)
     }
 
+    private val prettyPrinter = DefaultPrettyPrinter().apply {
+        indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE)   // 数组换行
+        indentObjectsWith(DefaultIndenter("    ", DefaultIndenter.SYS_LF)) // 对象换行 + 4 空格
+    }
+
     private fun saveToDisk() {
-        storageFile.writeText(mapper.writeValueAsString(data))
+        storageFile.writeText(mapper.writer(prettyPrinter).writeValueAsString(data))
     }
 
     private fun startWatcher() {
@@ -103,6 +121,20 @@ object DataStore {
                 }
             }
         }.apply { isDaemon = true }.start()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun startWatcherNio() = thread(isDaemon = true) {
+        val path = storageFile.toPath().parent
+        val watch = path.fileSystem.newWatchService()
+        path.register(watch, StandardWatchEventKinds.ENTRY_MODIFY)
+        while (true) {
+            val key = watch.take()
+            key.pollEvents().forEach {
+                if (it.context().toString() == storageFile.name) loadFromDisk()
+            }
+            key.reset()
+        }
     }
 
     /* -------------------------------------------------- */
